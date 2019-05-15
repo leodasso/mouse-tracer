@@ -1,30 +1,60 @@
-import React, { useState, useEffect } from 'react';
+import React, { Component } from "react";
 
-function Canvas() {
+class Canvas extends Component {
 
-    const [canvasNode, setCanvasNode] = useState(null);
+	state = {
+		mouseX: 0,
+		mouseY: 0,
+	}
 
-    useEffect(() => {
-        console.log("canvas node is now ", canvasNode);
+	componentDidMount() {
 
-        if (canvasNode != null) {
-            console.log('setting interval on canvas');
-            setInterval(updateCanvas(), 60);
-        }
+		this.initCanvas();
 
-    }, [canvasNode])
+		// create an event for mouse move
+		window.addEventListener(
+			"mousemove",
+			event => {
+				this.setState({mouseX: event.screenX, mouseY: event.screenY});
+			},
+			false
+		);
+	}
 
-  return (
-    <div>
-        <canvas ref={node => setCanvasNode(node)} className="canvas"/>
-    </div>
-  );
-}
+	initCanvas() {
 
-const updateCanvas = (canvas) => () => {
+		// set width and heigght
+		this.refs.canvas.width = 800;
+		this.refs.canvas.height = 700;
 
-    console.log('updating canvas...');
+		const ctx = this.refs.canvas.getContext('2d');
+		
+		setInterval(this.updateCanvas(ctx), 30);
+	}
 
+
+	updateCanvas = ctx => () => {
+
+		// clear everything drawn in previous frames
+		ctx.clearRect(0, 0, 800, 800);
+
+		// draw a random line because reasons
+		ctx.beginPath();
+		ctx.moveTo(this.state.mouseX, this.state.mouseY);
+		ctx.lineTo(Math.random() * 800, Math.random() * 700);
+		ctx.stroke();
+		ctx.closePath();
+	}
+
+
+	render() {
+
+		return (
+			<div>
+				<canvas ref="canvas" className="canvas" />
+			</div>
+		);
+	}
 }
 
 export default Canvas;
