@@ -8,9 +8,10 @@
  */
 function domToCanvasCoords(canvasElement, inputCoords) {
 	const canvasRect = canvasElement.getBoundingClientRect();
+
 	return {
-		x: inputCoords.x - canvasRect.x,
-		y: inputCoords.y - canvasRect.y,
+		x: inputCoords.x - canvasRect.left,
+		y: inputCoords.y - canvasRect.top,
 	}
 }
 
