@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import { domToCanvasCoords, lerp, randomRange} from "../calc";
 import { perlin2, seed } from "../noisejs/perlin";
 import Path from "../classes/Path";
+import Axios from "axios";
 
 class Canvas extends Component {
 
@@ -75,8 +76,6 @@ class Canvas extends Component {
 
 	finishDrawing(memorize) {
 
-		console.log('finishing drawing, and memorizing:', memorize);
-
 		// remember the path
 		if (memorize) {
 			const cleanPath = [];
@@ -84,6 +83,15 @@ class Canvas extends Component {
 				cleanPath.push({x: pt.x, y: pt.y, t: pt.t, opacity: 100});
 
 			let newPath = new Path(cleanPath);
+
+			// upload the path
+			Axios.put('/sketches', cleanPath)
+			.then(() => {
+				console.log('success');
+			})
+			.catch((error) => {
+				console.log('error putting sketch', error);
+			});
 
 			this.setState({memorizedPaths: [...this.state.memorizedPaths, newPath]});
 		}
