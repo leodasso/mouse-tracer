@@ -1,18 +1,20 @@
 import React, { Component } from "react";
 import { domToCanvasCoords, lerp, randomRange} from "../calc";
 import { perlin2, seed } from "../noisejs/perlin";
-
+import Path from "../classes/Path";
 
 class Canvas extends Component {
 
 	state = {
 		mouseX: 0,
 		mouseY: 0,
-		pathPoints: [],
+		pathPoints: [],				// points for the CURRENT drawing
+		memorizedPaths: [],
 		age: 0,						// in milliseconds
 		duration: 5000,
 		timerIntervalId: -99,
 		startingWidth: 800,
+		drawingEnabled: true,
 	}
 
 	componentDidMount() 
@@ -27,7 +29,7 @@ class Canvas extends Component {
 		window.addEventListener( "mousemove",
 			event => {
 
-				if (!this.isDrawingTime()) return;
+				if (!this.state.drawingEnabled) return;
 
 				this.setState({
 					mouseX: event.screenX, 
@@ -44,7 +46,8 @@ class Canvas extends Component {
 							opacity: 100,
 							// This is the opacity that gets lerped to
 							finalOpacity: 100,
-							t: this.state.age}],
+							t: this.state.age
+						}],
 				});
 			},
 			false
@@ -57,19 +60,51 @@ class Canvas extends Component {
 		
 		this.setState({age: this.state.age + 20});
 
+		// draw each memorized path
+		for (const path of this.state.memorizedPaths) {
+			path.setAge(this.state.age);
+		}
+
+		// when the duration is complete, finish things up
 		if (this.state.age > this.state.duration) {
 			clearInterval(this.state.timerIntervalId);
-			this.exlpodePath();
+			this.finishDrawing(this.state.drawingEnabled);
+			this.setState({drawingEnabled: false});
 		}
 	}
 
-	exlpodePath() {
+	finishDrawing(memorize) {
 
+		console.log('finishing drawing, and memorizing:', memorize);
+
+		// remember the path
+		if (memorize) {
+			const cleanPath = [];
+			for (let pt of this.state.pathPoints) 
+				cleanPath.push({x: pt.x, y: pt.y, t: pt.t, opacity: 100});
+
+			let newPath = new Path(cleanPath);
+
+			this.setState({memorizedPaths: [...this.state.memorizedPaths, newPath]});
+		}
+
+		this.exlpodePath();
+
+		//reset the counter 
+		this.setState({age: 0});
+		const timerInterval = setInterval(this.increment, 20)
+		this.setState({timerIntervalId: timerInterval});
+	}
+
+
+	exlpodePath() {
 		// randomize the perlin noise
 		seed( Math.round(randomRange(0, 32000)));
 
 		for (let pt of this.state.pathPoints) {
 
+			// Calculate a vector that each point will move to based on the perlin noise 
+			// of it's position. This makes for a cool, smooth, curvy explosion
 			const noiseScale = .003;
 			const power = 20;
 			let radians = perlin2(pt.x * noiseScale, pt.y * noiseScale) * Math.PI * 2;
@@ -82,6 +117,7 @@ class Canvas extends Component {
 	}
 
 
+
 	initCanvas() 
 	{
 		// set width and heigght
@@ -91,7 +127,6 @@ class Canvas extends Component {
 		setInterval(this.updateCanvas, 30);
 	}
 
-	isDrawingTime = () => this.state.age < this.state.duration;
 
 
 	updateCanvas = () => 
@@ -103,12 +138,14 @@ class Canvas extends Component {
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 		// render the current mouse position
-		ctx.fillStyle = "hsl(100, 0%, 80%)";
-		const canvasCoords = domToCanvasCoords(canvas, {x:this.state.mouseX, y:this.state.mouseY});
-		ctx.beginPath();
-		ctx.arc(canvasCoords.x, canvasCoords.y - 80, 10, 0, 2 * Math.PI);
-		ctx.fill();
-		ctx.closePath();
+		if (this.state.drawingEnabled) {
+			ctx.fillStyle = "hsl(100, 0%, 80%)";
+			const canvasCoords = domToCanvasCoords(canvas, {x:this.state.mouseX, y:this.state.mouseY});
+			ctx.beginPath();
+			ctx.arc(canvasCoords.x, canvasCoords.y - 80, 10, 0, 2 * Math.PI);
+			ctx.fill();
+			ctx.closePath();
+		}
 
 
 		// update each point in the path
@@ -127,18 +164,28 @@ class Canvas extends Component {
 			pt.vy -= pt.vy * pt.drag;
 		};
 		
+		this.renderPath(this.state.pathPoints, ctx, canvas, 6);
+
+		for (const path of this.state.memorizedPaths) {
+			this.renderPath(path.renderPoints, ctx, canvas, 4);
+		}
+
+	}
+
+
+	renderPath(pointsArray, ctx, canvas, width) {
 
 		// render each point in the path
-		for (let i = 1; i < this.state.pathPoints.length; i++) {
+		for (let i = 1; i < pointsArray.length; i++) {
 
-			const pt = this.state.pathPoints[i];
-			const prevPt = this.state.pathPoints[i-1];
+			const pt = pointsArray[i];
+			const prevPt = pointsArray[i-1];
 			const lifetime = this.state.age - pt.t;
 			if (lifetime > this.state.duration) continue;
 
 			const ratio = lifetime / this.state.duration;
 			ctx.strokeStyle = `hsla(100, 50%, ${ratio * 100}%, ${pt.opacity}%)`;
-			ctx.lineWidth = 6 * (1 - ratio);
+			ctx.lineWidth = width * (1 - ratio);
 
 			const canvasCoords = domToCanvasCoords(canvas, {x:pt.x, y:pt.y});
 			const prevCanvasCoords = domToCanvasCoords(canvas, {x:prevPt.x, y:prevPt.y});
@@ -149,7 +196,6 @@ class Canvas extends Component {
 			ctx.stroke();
 			ctx.closePath();
 		};
-		
 	}
 
 
