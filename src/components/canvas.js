@@ -5,18 +5,20 @@ import Path from "../classes/Path";
 import Axios from "axios";
 import { setModeToDraw } from '../Events';
 
+// Array of all the points of the current drawing
+let currentDrawing = [];
+let mouseX = 0;
+let mouseY = 0;
+
 class Canvas extends Component {
 
 	state = {
-		mouseX: 0,
-		mouseY: 0,
-		pathPoints: [],				// points for the CURRENT drawing
 		memorizedPaths: [],
 		age: 0,						// in milliseconds
 		duration: 5000,
 		timerIntervalId: -99,
 		startingWidth: 800,
-		drawingEnabled: true,
+		drawingEnabled: false,
 	}
 
 	componentDidMount() 
@@ -25,49 +27,43 @@ class Canvas extends Component {
 
 		// add the begin drawing to the right event
 		setModeToDraw.addListener(this.beginDrawing);
+
+		// When the mouse moves, record the position
+		window.addEventListener( "mousemove", event => {
+			if (!this.state.drawingEnabled) return;
+
+			mouseX = event.screenX;
+			mouseY = event.screenY;
+	
+			currentDrawing.push({
+				x: event.screenX, 
+				y: event.screenY, 
+				// Velocity
+				vx: 0,
+				vy: 0,
+				gravity: 0,
+				drag: .08,
+				opacity: 100,
+				// This is the opacity that gets lerped to
+				finalOpacity: 100,
+				t: this.state.age
+			})
+		});
 	}
 
 	beginTimer = () => {
 		//add a counter 
 		const timerInterval = setInterval(this.increment, 20)
-		this.setState({timerIntervalId: timerInterval});
+		this.setState({timerIntervalId: timerInterval, age: 0});
 	}
 
 	beginDrawing = () => {
 
-		console.log("beginning drawing...");
-
 		this.beginTimer();
-
-		// When the mouse moves, we want to update the state with it's new position
-		window.addEventListener( "mousemove",
-		event => {
-
-			if (!this.state.drawingEnabled) return;
-
-			this.setState({
-				mouseX: event.screenX, 
-				mouseY: event.screenY,
-				pathPoints: [...this.state.pathPoints, 
-					{
-						x: event.screenX, 
-						y: event.screenY, 
-						// Velocity
-						vx: 0,
-						vy: 0,
-						gravity: 0,
-						drag: .08,
-						opacity: 100,
-						// This is the opacity that gets lerped to
-						finalOpacity: 100,
-						t: this.state.age
-					}],
-			});
-		},
-		false
-		);
+		this.setState({ drawingEnabled: true });
+		// clear out any previous drawings
+		currentDrawing = [];
 	}
-
 
 	// Increment the age of the component, and checks if drawing time is complete
 	increment = () => {
@@ -89,8 +85,19 @@ class Canvas extends Component {
 
 	finishDrawing() {
 
+		console.log('path points count', currentDrawing.length);
+
+		// clean the path info so the payload isn't so big
+		const filteredPts = currentDrawing.map( pt => {
+			return {
+				x: pt.x,
+				y: pt.y,
+				t: pt.t,
+			}
+		})
+
 		// upload the path
-		Axios.put('/api/sketches', this.state.pathPoints)
+		Axios.put('/api/sketches', filteredPts)
 		.then(() => {
 			console.log('success');
 		})
@@ -106,13 +113,15 @@ class Canvas extends Component {
 		// randomize the perlin noise
 		seed( Math.round(randomRange(0, 32000)));
 
-		for (let pt of this.state.pathPoints) {
+		for (let i = 0; i < currentDrawing.length; i++) {
+
+			const pt = currentDrawing[i];
 
 			// Calculate a vector that each point will move to based on the perlin noise 
 			// of it's position. This makes for a cool, smooth, curvy explosion
-			const noiseScale = .003;
+			const noiseScale = .0015;
 			const power = 20;
-			let radians = perlin2(pt.x * noiseScale, pt.y * noiseScale) * Math.PI * 2;
+			let radians = perlin2(pt.x * noiseScale, (pt.y + i * 2) * noiseScale) * Math.PI * 2;
 
 			pt.vx = Math.cos(radians) * power;
 			pt.vy = Math.sin(radians) * power;
@@ -145,7 +154,7 @@ class Canvas extends Component {
 		// render the current mouse position
 		if (this.state.drawingEnabled) {
 			ctx.fillStyle = "hsl(100, 0%, 80%)";
-			const canvasCoords = domToCanvasCoords(canvas, {x:this.state.mouseX, y:this.state.mouseY});
+			const canvasCoords = domToCanvasCoords(canvas, {x:mouseX, y:mouseY});
 			ctx.beginPath();
 			ctx.arc(canvasCoords.x, canvasCoords.y - 80, 10, 0, 2 * Math.PI);
 			ctx.fill();
@@ -154,9 +163,9 @@ class Canvas extends Component {
 
 
 		// update each point in the path
-		for (let i = 1; i < this.state.pathPoints.length; i++) {
+		for (let i = 1; i < currentDrawing.length; i++) {
 
-			const pt = this.state.pathPoints[i];
+			const pt = currentDrawing[i];
 
 			pt.opacity = lerp(pt.opacity, pt.finalOpacity, .09);
 			// apply gravity to the point
@@ -169,7 +178,7 @@ class Canvas extends Component {
 			pt.vy -= pt.vy * pt.drag;
 		};
 		
-		this.renderPath(this.state.pathPoints, ctx, canvas, 6);
+		this.renderPath(currentDrawing, ctx, canvas, 6);
 
 		for (const path of this.state.memorizedPaths) {
 			this.renderPath(path.renderPoints, ctx, canvas, 4);
