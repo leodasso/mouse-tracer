@@ -1,15 +1,9 @@
+import PathPoint from './PathPoint';
+
 export default class Path {
 
     constructor(pathPoints) {
-        this.pathPoints = pathPoints.map(pt => {
-            return {
-                x: pt.x,
-                y: pt.y,
-                t: pt.t,
-                finalOpacity: 100,
-                opacity: 100,
-            }
-        });
+        this.pathPoints = pathPoints;
         this.renderPoints = [];
 
     }
@@ -25,7 +19,7 @@ export default class Path {
         
         // Once it's time for the path point to be added, add it to the renderPoints array
         if (age >= currentPt.t) {
-            this.renderPoints.push(currentPt);
+            this.renderPoints.push(new PathPoint(currentPt.x, currentPt.y, currentPt.t) );
         }
     }
 }

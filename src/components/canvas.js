@@ -1,9 +1,10 @@
 import React, { Component } from "react";
-import { domToCanvasCoords, lerp, randomRange} from "../calc";
+import { domToCanvasCoords, randomRange} from "../calc";
 import { perlin2, seed } from "../noisejs/perlin";
 import Path from "../classes/Path";
 import Axios from "axios";
 import { setModeToDraw, viewRandom } from '../Events';
+import PathPoint from '../classes/PathPoint';
 
 // Array of all the points of the current drawing
 let currentDrawing = [];
@@ -39,19 +40,10 @@ class Canvas extends Component {
 			mouseX = event.screenX;
 			mouseY = event.screenY;
 	
-			currentDrawing.push({
-				x: event.screenX, 
-				y: event.screenY, 
-				// Velocity
-				vx: 0,
-				vy: 0,
-				gravity: 0,
-				drag: .08,
-				opacity: 100,
-				// This is the opacity that gets lerped to
-				finalOpacity: 100,
-				t: this.state.age
-			})
+			currentDrawing.push( new PathPoint(
+				event.screenX, 
+				event.screenY, 
+				this.state.age));
 		});
 	}
 
@@ -200,20 +192,7 @@ class Canvas extends Component {
 	}
 
 	updatePath(pointsArray) {
-		for (let i = 1; i < pointsArray.length; i++) {
-
-			const pt = pointsArray[i];
-
-			pt.opacity = lerp(pt.opacity, pt.finalOpacity, .09);
-			// apply gravity to the point
-			pt.vy += pt.gravity;
-			// update the position of the point
-			pt.x += pt.vx;
-			pt.y += pt.vy;
-			// apply drag to the point
-			pt.vx -= pt.vx * pt.drag;
-			pt.vy -= pt.vy * pt.drag;
-		};
+		for (let pt of pointsArray) pt.update();
 	}
 
 
