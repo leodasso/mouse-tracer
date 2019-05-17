@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 app.use(bodyParser.json());
 
 // ROUTES
-app.use('/sketches', sketchRouter);
+app.use('/api/sketches', sketchRouter);
 
 app.listen(PORT, () => {
     console.log('Tracer server is live on port', PORT);
