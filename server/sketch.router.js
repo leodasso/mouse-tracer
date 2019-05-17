@@ -30,4 +30,22 @@ router.get('/', (req, resp) => {
     resp.send({sketches});
 });
 
+router.get('/random', (req, resp) => {
+
+    if (sketches.length < 1) {
+        console.log("there's no sketches, so can't send a random one back!");
+        resp.sendStatus(501);
+        return;
+    }
+
+    const sketch = randomElementFromArray(sketches);
+    resp.send(sketch);
+})
+
+
+function randomElementFromArray(array) {
+	const random = Math.random() * array.length;
+	return array[Math.floor(random)];
+}
+
 module.exports = router;

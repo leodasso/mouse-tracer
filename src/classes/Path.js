@@ -1,7 +1,15 @@
 export default class Path {
 
     constructor(pathPoints) {
-        this.pathPoints = pathPoints;
+        this.pathPoints = pathPoints.map(pt => {
+            return {
+                x: pt.x,
+                y: pt.y,
+                t: pt.t,
+                finalOpacity: 100,
+                opacity: 100,
+            }
+        });
         this.renderPoints = [];
 
     }

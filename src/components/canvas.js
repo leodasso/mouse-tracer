@@ -3,22 +3,24 @@ import { domToCanvasCoords, lerp, randomRange} from "../calc";
 import { perlin2, seed } from "../noisejs/perlin";
 import Path from "../classes/Path";
 import Axios from "axios";
-import { setModeToDraw } from '../Events';
+import { setModeToDraw, viewRandom } from '../Events';
 
 // Array of all the points of the current drawing
 let currentDrawing = [];
 let mouseX = 0;
 let mouseY = 0;
 
+let viewedDrawing = null;
+
 class Canvas extends Component {
 
 	state = {
-		memorizedPaths: [],
 		age: 0,						// in milliseconds
 		duration: 5000,
 		timerIntervalId: -99,
 		startingWidth: 800,
 		drawingEnabled: false,
+		viewing: false,
 	}
 
 	componentDidMount() 
@@ -27,6 +29,8 @@ class Canvas extends Component {
 
 		// add the begin drawing to the right event
 		setModeToDraw.addListener(this.beginDrawing);
+
+		viewRandom.addListener(this.viewRandom);
 
 		// When the mouse moves, record the position
 		window.addEventListener( "mousemove", event => {
@@ -57,6 +61,20 @@ class Canvas extends Component {
 		this.setState({timerIntervalId: timerInterval, age: 0});
 	}
 
+	viewRandom = () => {
+
+		// request for a random drawing
+		Axios.get('/api/sketches/random')
+		.then( response => {
+			this.beginTimer();
+			const newPath = new Path(response.data);
+			viewedDrawing = newPath;
+		})
+		.catch(error => {
+			console.log('error getting random sketch', error);
+		})
+	}
+
 	beginDrawing = () => {
 
 		this.beginTimer();
@@ -70,22 +88,28 @@ class Canvas extends Component {
 		
 		this.setState({age: this.state.age + 20});
 
-		// draw each memorized path
-		for (const path of this.state.memorizedPaths) {
-			path.setAge(this.state.age);
-		}
+		// draw each memorized path 
+		if (viewedDrawing)
+			viewedDrawing.setAge(this.state.age);
 
 		// when the duration is complete, finish things up
 		if (this.state.age > this.state.duration) {
 			clearInterval(this.state.timerIntervalId);
-			this.finishDrawing(this.state.drawingEnabled);
+			if (this.state.drawingEnabled) {
+				this.finishDrawing();
+			}
+
+			else if (viewedDrawing) {
+				this.exlpodePath(viewedDrawing.renderPoints);
+			}
+
 			this.setState({drawingEnabled: false});
 		}
 	}
 
 	finishDrawing() {
 
-		console.log('path points count', currentDrawing.length);
+		this.setState({drawingEnabled: false});
 
 		// clean the path info so the payload isn't so big
 		const filteredPts = currentDrawing.map( pt => {
@@ -105,21 +129,21 @@ class Canvas extends Component {
 			console.log('error putting sketch', error);
 		});
 
-		this.exlpodePath();
+		this.exlpodePath(currentDrawing);
 	}
 
 
-	exlpodePath() {
+	exlpodePath(pathArray) {
 		// randomize the perlin noise
 		seed( Math.round(randomRange(0, 32000)));
 
-		for (let i = 0; i < currentDrawing.length; i++) {
+		for (let i = 0; i < pathArray.length; i++) {
 
-			const pt = currentDrawing[i];
+			const pt = pathArray[i];
 
 			// Calculate a vector that each point will move to based on the perlin noise 
 			// of it's position. This makes for a cool, smooth, curvy explosion
-			const noiseScale = .0015;
+			const noiseScale = .002;
 			const power = 20;
 			let radians = perlin2(pt.x * noiseScale, (pt.y + i * 2) * noiseScale) * Math.PI * 2;
 
@@ -163,9 +187,22 @@ class Canvas extends Component {
 
 
 		// update each point in the path
-		for (let i = 1; i < currentDrawing.length; i++) {
+		this.updatePath(currentDrawing);
 
-			const pt = currentDrawing[i];
+		if (viewedDrawing) 
+			this.updatePath(viewedDrawing.renderPoints);
+		
+		this.renderPath(currentDrawing, ctx, canvas, 6);
+
+		if (viewedDrawing)
+			this.renderPath(viewedDrawing.renderPoints, ctx, canvas, 4);
+
+	}
+
+	updatePath(pointsArray) {
+		for (let i = 1; i < pointsArray.length; i++) {
+
+			const pt = pointsArray[i];
 
 			pt.opacity = lerp(pt.opacity, pt.finalOpacity, .09);
 			// apply gravity to the point
@@ -177,13 +214,6 @@ class Canvas extends Component {
 			pt.vx -= pt.vx * pt.drag;
 			pt.vy -= pt.vy * pt.drag;
 		};
-		
-		this.renderPath(currentDrawing, ctx, canvas, 6);
-
-		for (const path of this.state.memorizedPaths) {
-			this.renderPath(path.renderPoints, ctx, canvas, 4);
-		}
-
 	}
 
 

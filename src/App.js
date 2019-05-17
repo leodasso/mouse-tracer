@@ -1,7 +1,7 @@
 import React from 'react';
 import './App.css';
 import Canvas from './components/canvas';
-import { setModeToView, setModeToDraw } from './Events';
+import { setModeToDraw, viewRandom } from './Events';
 
 function App() {
 
@@ -10,22 +10,22 @@ function App() {
       <header className="App-header">
         <h1>SKETCH</h1>
         <div>
-          <button onClick={beginDrawing}>
+
+          <button 
+            onClick={() => setModeToDraw.invoke()}>
             draw
           </button>
-          <button>see random sketch</button>
+
+          <button
+            onClick={() => viewRandom.invoke()}>
+            see random sketch
+          </button>
+          
         </div>
-        <Canvas startDraw={beginDrawing}/>
+        <Canvas />
       </header>
     </div>
   );
-}
-
-function beginDrawing() {
-
-  console.log('hi ur drawing arent you');
-  setModeToDraw.invoke();
-
 }
 
 export default App;
