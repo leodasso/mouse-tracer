@@ -3,6 +3,7 @@ import { domToCanvasCoords, lerp, randomRange} from "../calc";
 import { perlin2, seed } from "../noisejs/perlin";
 import Path from "../classes/Path";
 import Axios from "axios";
+import { setModeToDraw } from '../Events';
 
 class Canvas extends Component {
 
@@ -20,38 +21,50 @@ class Canvas extends Component {
 
 	componentDidMount() 
 	{
+		this.initCanvas();
 
+		// add the begin drawing to the right event
+		setModeToDraw.addListener(this.beginDrawing);
+	}
+
+	beginTimer = () => {
 		//add a counter 
 		const timerInterval = setInterval(this.increment, 20)
 		this.setState({timerIntervalId: timerInterval});
+	}
 
-		this.initCanvas();
+	beginDrawing = () => {
+
+		console.log("beginning drawing...");
+
+		this.beginTimer();
+
 		// When the mouse moves, we want to update the state with it's new position
 		window.addEventListener( "mousemove",
-			event => {
+		event => {
 
-				if (!this.state.drawingEnabled) return;
+			if (!this.state.drawingEnabled) return;
 
-				this.setState({
-					mouseX: event.screenX, 
-					mouseY: event.screenY,
-					pathPoints: [...this.state.pathPoints, 
-						{
-							x: event.screenX, 
-							y: event.screenY, 
-							// Velocity
-							vx: 0,
-							vy: 0,
-							gravity: 0,
-							drag: .08,
-							opacity: 100,
-							// This is the opacity that gets lerped to
-							finalOpacity: 100,
-							t: this.state.age
-						}],
-				});
-			},
-			false
+			this.setState({
+				mouseX: event.screenX, 
+				mouseY: event.screenY,
+				pathPoints: [...this.state.pathPoints, 
+					{
+						x: event.screenX, 
+						y: event.screenY, 
+						// Velocity
+						vx: 0,
+						vy: 0,
+						gravity: 0,
+						drag: .08,
+						opacity: 100,
+						// This is the opacity that gets lerped to
+						finalOpacity: 100,
+						t: this.state.age
+					}],
+			});
+		},
+		false
 		);
 	}
 
@@ -74,34 +87,18 @@ class Canvas extends Component {
 		}
 	}
 
-	finishDrawing(memorize) {
+	finishDrawing() {
 
-		// remember the path
-		if (memorize) {
-			const cleanPath = [];
-			for (let pt of this.state.pathPoints) 
-				cleanPath.push({x: pt.x, y: pt.y, t: pt.t, opacity: 100});
-
-			let newPath = new Path(cleanPath);
-
-			// upload the path
-			Axios.put('/sketches', cleanPath)
-			.then(() => {
-				console.log('success');
-			})
-			.catch((error) => {
-				console.log('error putting sketch', error);
-			});
-
-			this.setState({memorizedPaths: [...this.state.memorizedPaths, newPath]});
-		}
+		// upload the path
+		Axios.put('/api/sketches', this.state.pathPoints)
+		.then(() => {
+			console.log('success');
+		})
+		.catch((error) => {
+			console.log('error putting sketch', error);
+		});
 
 		this.exlpodePath();
-
-		//reset the counter 
-		this.setState({age: 0});
-		const timerInterval = setInterval(this.increment, 20)
-		this.setState({timerIntervalId: timerInterval});
 	}
 
 
