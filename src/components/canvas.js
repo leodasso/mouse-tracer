@@ -3,15 +3,14 @@ import { domToCanvasCoords, randomRange} from "../calc";
 import { perlin2, seed } from "../noisejs/perlin";
 import Path from "../classes/Path";
 import Axios from "axios";
-import { setModeToDraw, viewRandom } from '../Events';
+import { setModeToDraw, viewRandom, viewAll } from '../Events';
 import PathPoint from '../classes/PathPoint';
 
 // Array of all the points of the current drawing
 let currentDrawing = [];
+let currentPaths = [];
 let mouseX = 0;
 let mouseY = 0;
-
-let viewedDrawing = null;
 
 class Canvas extends Component {
 
@@ -30,8 +29,8 @@ class Canvas extends Component {
 
 		// add the begin drawing to the right event
 		setModeToDraw.addListener(this.beginDrawing);
-
 		viewRandom.addListener(this.viewRandom);
+		viewAll.addListener(this.viewAll);
 
 		// When the mouse moves, record the position
 		window.addEventListener( "mousemove", event => {
@@ -60,11 +59,17 @@ class Canvas extends Component {
 		.then( response => {
 			this.beginTimer();
 			const newPath = new Path(response.data);
-			viewedDrawing = newPath;
+			currentPaths.push(newPath);
 		})
 		.catch(error => {
 			console.log('error getting random sketch', error);
 		})
+	}
+
+	viewAll = () => {
+		// TODO
+
+
 	}
 
 	beginDrawing = () => {
@@ -81,21 +86,23 @@ class Canvas extends Component {
 		this.setState({age: this.state.age + 20});
 
 		// draw each memorized path 
-		if (viewedDrawing)
-			viewedDrawing.setAge(this.state.age);
+		for (let path of currentPaths) {
 
-		// when the duration is complete, finish things up
-		if (this.state.age > this.state.duration) {
-			clearInterval(this.state.timerIntervalId);
-			if (this.state.drawingEnabled) {
-				this.finishDrawing();
+			if (!path) continue;
+
+			path.setAge(this.state.age);
+
+			// when the duration is complete, finish things up
+			if (this.state.age > this.state.duration) {
+				clearInterval(this.state.timerIntervalId);
+				if (this.state.drawingEnabled) {
+					this.finishDrawing();
+				}
+
+				else this.exlpodePath(path.renderPoints);
+
+				this.setState({drawingEnabled: false});
 			}
-
-			else if (viewedDrawing) {
-				this.exlpodePath(viewedDrawing.renderPoints);
-			}
-
-			this.setState({drawingEnabled: false});
 		}
 	}
 
@@ -181,13 +188,15 @@ class Canvas extends Component {
 		// update each point in the path
 		this.updatePath(currentDrawing);
 
-		if (viewedDrawing) 
-			this.updatePath(viewedDrawing.renderPoints);
+		// run update behaviors for all the render points.
+		// This has to happen in a sep loop so ALL points can be updated before any render
+		for (let path of currentPaths)
+			this.updatePath(path.renderPoints);
 		
 		this.renderPath(currentDrawing, ctx, canvas, 6);
 
-		if (viewedDrawing)
-			this.renderPath(viewedDrawing.renderPoints, ctx, canvas, 4);
+		for (let path of currentPaths)
+			this.renderPath(path.renderPoints, ctx, canvas, 4);
 
 	}
 
