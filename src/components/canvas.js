@@ -53,12 +53,13 @@ class Canvas extends Component {
 	}
 
 	viewRandom = () => {
-
 		// request for a random drawing
 		Axios.get('/api/sketches/random')
 		.then( response => {
+
+			currentPaths = [];
 			this.beginTimer();
-			const newPath = new Path(response.data);
+			const newPath = new Path(response.data.path);
 			currentPaths.push(newPath);
 		})
 		.catch(error => {
@@ -66,9 +67,24 @@ class Canvas extends Component {
 		})
 	}
 
-	viewAll = () => {
-		// TODO
 
+	viewAll = () => {
+		
+		Axios.get('/api/sketches/all')
+
+		.then( response => {
+			// clear out the array of paths
+			currentPaths = [];
+			for (let sketch of response.data) {
+				currentPaths.push(new Path(sketch.path));
+			}
+
+			this.beginTimer();
+		})
+
+		.catch(error => {
+			console.log('error getting sketches', error);
+		})
 
 	}
 
@@ -80,31 +96,33 @@ class Canvas extends Component {
 		currentDrawing = [];
 	}
 
-	// Increment the age of the component, and checks if drawing time is complete
+	// Increment to the next update frame
 	increment = () => {
 		
 		this.setState({age: this.state.age + 20});
 
-		// draw each memorized path 
-		for (let path of currentPaths) {
+		const timeFinished = this.state.age > this.state.duration;
 
-			if (!path) continue;
-
-			path.setAge(this.state.age);
-
-			// when the duration is complete, finish things up
-			if (this.state.age > this.state.duration) {
-				clearInterval(this.state.timerIntervalId);
-				if (this.state.drawingEnabled) {
-					this.finishDrawing();
-				}
-
-				else this.exlpodePath(path.renderPoints);
-
+		if (timeFinished) {
+			clearInterval(this.state.timerIntervalId);
+			if (this.state.drawingEnabled) {
+				this.finishDrawing();
 				this.setState({drawingEnabled: false});
 			}
 		}
+
+		// set the correct time on each memorized path
+		for (let path of currentPaths) {
+
+			if (!path) continue;
+			path.setAge(this.state.age);
+
+			// when the duration is complete, finish things up
+			if (timeFinished) 
+				this.exlpodePath(path.renderPoints);
+		}
 	}
+
 
 	finishDrawing() {
 
