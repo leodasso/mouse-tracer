@@ -3,19 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "proxy": "http://localhost:5000",
-
   "dependencies": {
     "axios": "^0.18.0",
     "body-parser": "^1.19.0",
     "express": "^4.16.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "^3.0.1"
+    "react-redux": "^7.0.3",
+    "react-scripts": "^3.0.1",
+    "redux": "^4.0.1",
+    "redux-saga": "^1.0.3"
   },
   "devDependencies": {
     "nodemon": "^1.18.4"
   },
-
   "scripts": {
     "client": "react-scripts start",
     "server": "nodemon --watch server server/server.js",
@@ -24,7 +25,6 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-
   "eslintConfig": {
     "extends": "react-app"
   },
