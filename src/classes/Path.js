@@ -1,6 +1,6 @@
 import PathPoint from './PathPoint';
 import { perlin2, seed } from "../noisejs/perlin";
-import { domToCanvasCoords, randomRange} from "../calc";
+import { domToCanvasCoords, randomRange, distance} from "../calc";
 
 export default class Path {
 
@@ -8,6 +8,7 @@ export default class Path {
         this.pathPoints = pathPoints;
         this.renderPoints = [];
         this.width = width;
+        this.length = 0;
     }
 
 
@@ -43,9 +44,23 @@ export default class Path {
     }
 
     addPoint(x, y, time) {
+
+        // get the previous point so we can determine the length of this segment
+        if (this.pathPoints.length > 0) {
+            const prevPoint = this.pathPoints[this.pathPoints.length-1];
+            const segmentLength = distance(prevPoint.x, prevPoint.y, x, y);
+
+            // set a minimum segment length (in pixels)
+            if (segmentLength < 5) return this.length;
+
+            this.length += segmentLength;
+        }
+
         const newPoint = new PathPoint(x, y, time);
         this.pathPoints.push(newPoint);
         this.renderPoints.push(newPoint);
+
+        return this.length;
     }
     
 

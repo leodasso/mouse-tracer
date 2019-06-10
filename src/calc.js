@@ -39,4 +39,17 @@ function lerp (start, end, progress) {
 	return start + (range * progress);
 }
 
-export {domToCanvasCoords, randomRange, randomElementFromArray, lerp}
+/**
+ * Returns the distance between two points (2D)
+ * @param {Number} x1 
+ * @param {Number} y1 
+ * @param {Number} x2 
+ * @param {Number} y2 
+ */
+function distance(x1, y1, x2, y2) {
+	const x = x2 - x1;
+	const y = y2 - y1;
+	return Math.sqrt( x*x + y*y );
+}
+
+export {domToCanvasCoords, randomRange, randomElementFromArray, lerp, distance}

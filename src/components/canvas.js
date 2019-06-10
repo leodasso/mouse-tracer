@@ -14,8 +14,8 @@ let mouseY = 0;
 class Canvas extends Component {
 
 	state = {
-		age: 0,						// in milliseconds
-		duration: 5000,
+		lineLength: 0,
+		maxLineLength: 2000,
 		timerIntervalId: -99,
 		startingWidth: 800,
 		drawingEnabled: false,
@@ -39,14 +39,9 @@ class Canvas extends Component {
 			mouseX = event.screenX;
 			mouseY = event.screenY;
 	
-			currentDrawing.addPoint(event.screenX, event.screenY, this.state.age);
+			const newLength = currentDrawing.addPoint(event.screenX, event.screenY, this.state.age);
+			this.increment(newLength);
 		});
-	}
-
-	beginTimer = () => {
-		//add a counter 
-		const timerInterval = setInterval(this.increment, 20)
-		this.setState({timerIntervalId: timerInterval, age: 0});
 	}
 
 	viewRandom = () => {
@@ -55,7 +50,6 @@ class Canvas extends Component {
 		.then( response => {
 
 			currentPaths = [];
-			this.beginTimer();
 			const newPath = new Path(response.data.path);
 			currentPaths.push(newPath);
 		})
@@ -75,8 +69,6 @@ class Canvas extends Component {
 			for (let sketch of response.data) {
 				currentPaths.push(new Path(sketch.path));
 			}
-
-			this.beginTimer();
 		})
 
 		.catch(error => {
@@ -87,21 +79,18 @@ class Canvas extends Component {
 
 	beginDrawing = () => {
 
-		this.beginTimer();
 		this.setState({ drawingEnabled: true });
 		// clear out any previous drawings
 		currentDrawing = new Path([], 6);
 	}
 
-	// Increment to the next update frame
-	increment = () => {
+	// Increment as progress is made on the drawing
+	increment = (pathLength) => {
 		
-		this.setState({age: this.state.age + 20});
+		this.setState({lineLength: pathLength});
+		const isComplete = pathLength >= this.state.maxLineLength;
 
-		const timeFinished = this.state.age > this.state.duration;
-
-		if (timeFinished) {
-			clearInterval(this.state.timerIntervalId);
+		if (isComplete) {
 			if (this.state.drawingEnabled) {
 				this.finishDrawing();
 				this.setState({drawingEnabled: false});
@@ -115,8 +104,7 @@ class Canvas extends Component {
 			path.setAge(this.state.age);
 
 			// when the duration is complete, finish things up
-			if (timeFinished) {
-				console.log('exploding path', path);
+			if (isComplete) {
 				path.explode();
 			}
 		}
@@ -201,16 +189,16 @@ class Canvas extends Component {
 
 	render() {
 
-		// get the remaining time in seconds
-		let remainingTime = (this.state.duration - this.state.age) / 1000;
+		// get the remaining line length
+		let remainingLine = (this.state.maxLineLength - this.state.lineLength) / 1000;
 		// make it read as a clean 2 decimal number
-		remainingTime = remainingTime.toFixed(2);
+		remainingLine = remainingLine.toFixed(2);
 		// clamp to 0
-		if (remainingTime < 0) remainingTime = 0;
+		if (remainingLine < 0) remainingLine = 0;
 
 		return (
 			<div>
-				<p>Draw for {remainingTime} seconds!</p>
+				<p>You have {remainingLine} left.</p>
 				<canvas ref="canvas" className="canvas" />
 			</div>
 		);
