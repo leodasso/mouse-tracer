@@ -1,13 +1,12 @@
 import React, { Component } from "react";
 import { domToCanvasCoords, randomRange} from "../calc";
-import { perlin2, seed } from "../noisejs/perlin";
+
 import Path from "../classes/Path";
 import Axios from "axios";
 import { setModeToDraw, viewRandom, viewAll } from '../Events';
-import PathPoint from '../classes/PathPoint';
 
 // Array of all the points of the current drawing
-let currentDrawing = [];
+let currentDrawing;
 let currentPaths = [];
 let mouseX = 0;
 let mouseY = 0;
@@ -34,15 +33,13 @@ class Canvas extends Component {
 
 		// When the mouse moves, record the position
 		window.addEventListener( "mousemove", event => {
-			if (!this.state.drawingEnabled) return;
+
+			if (!this.state.drawingEnabled || !currentDrawing) return;
 
 			mouseX = event.screenX;
 			mouseY = event.screenY;
 	
-			currentDrawing.push( new PathPoint(
-				event.screenX, 
-				event.screenY, 
-				this.state.age));
+			currentDrawing.addPoint(event.screenX, event.screenY, this.state.age);
 		});
 	}
 
@@ -93,7 +90,7 @@ class Canvas extends Component {
 		this.beginTimer();
 		this.setState({ drawingEnabled: true });
 		// clear out any previous drawings
-		currentDrawing = [];
+		currentDrawing = new Path([], 6);
 	}
 
 	// Increment to the next update frame
@@ -118,8 +115,10 @@ class Canvas extends Component {
 			path.setAge(this.state.age);
 
 			// when the duration is complete, finish things up
-			if (timeFinished) 
-				this.exlpodePath(path.renderPoints);
+			if (timeFinished) {
+				console.log('exploding path', path);
+				path.explode();
+			}
 		}
 	}
 
@@ -129,7 +128,7 @@ class Canvas extends Component {
 		this.setState({drawingEnabled: false});
 
 		// clean the path info so the payload isn't so big
-		const filteredPts = currentDrawing.map( pt => {
+		const filteredPts = currentDrawing.pathPoints.map( pt => {
 			return {
 				x: pt.x,
 				y: pt.y,
@@ -146,29 +145,7 @@ class Canvas extends Component {
 			console.log('error putting sketch', error);
 		});
 
-		this.exlpodePath(currentDrawing);
-	}
-
-
-	exlpodePath(pathArray) {
-		// randomize the perlin noise
-		seed( Math.round(randomRange(0, 32000)));
-
-		for (let i = 0; i < pathArray.length; i++) {
-
-			const pt = pathArray[i];
-
-			// Calculate a vector that each point will move to based on the perlin noise 
-			// of it's position. This makes for a cool, smooth, curvy explosion
-			const noiseScale = .002;
-			const power = 20;
-			let radians = perlin2(pt.x * noiseScale, (pt.y + i * 2) * noiseScale) * Math.PI * 2;
-
-			pt.vx = Math.cos(radians) * power;
-			pt.vy = Math.sin(radians) * power;
-			pt.gravity = .1;
-			pt.finalOpacity = 0;
-		}
+		currentDrawing.explode();
 	}
 
 
@@ -203,49 +180,22 @@ class Canvas extends Component {
 		}
 
 
-		// update each point in the path
-		this.updatePath(currentDrawing);
+		// Update and render the current drawing
+		if (currentDrawing) {
+			currentDrawing.update();
+			currentDrawing.render(ctx, canvas, this.state.age);
+		}
 
 		// run update behaviors for all the render points.
 		// This has to happen in a sep loop so ALL points can be updated before any render
-		for (let path of currentPaths)
-			this.updatePath(path.renderPoints);
-		
-		this.renderPath(currentDrawing, ctx, canvas, 6);
+		for (const path of currentPaths) {
+			path.update();
+		}
 
-		for (let path of currentPaths)
-			this.renderPath(path.renderPoints, ctx, canvas, 4);
+		for (const path of currentPaths) {
+			path.render(ctx, canvas, this.state.age);
+		}
 
-	}
-
-	updatePath(pointsArray) {
-		for (let pt of pointsArray) pt.update();
-	}
-
-
-	renderPath(pointsArray, ctx, canvas, width) {
-
-		// render each point in the path
-		for (let i = 1; i < pointsArray.length; i++) {
-
-			const pt = pointsArray[i];
-			const prevPt = pointsArray[i-1];
-			const lifetime = this.state.age - pt.t;
-			if (lifetime > this.state.duration) continue;
-
-			const ratio = lifetime / this.state.duration;
-			ctx.strokeStyle = `hsla(100, 50%, ${ratio * 100}%, ${pt.opacity}%)`;
-			ctx.lineWidth = width * (1 - ratio);
-
-			const canvasCoords = domToCanvasCoords(canvas, {x:pt.x, y:pt.y});
-			const prevCanvasCoords = domToCanvasCoords(canvas, {x:prevPt.x, y:prevPt.y});
-
-			ctx.beginPath();
-			ctx.moveTo(prevCanvasCoords.x, prevCanvasCoords.y - 80);
-			ctx.lineTo(canvasCoords.x, canvasCoords.y - 80);
-			ctx.stroke();
-			ctx.closePath();
-		};
 	}
 
 
