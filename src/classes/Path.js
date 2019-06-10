@@ -28,7 +28,8 @@ export default class Path {
 			const prevPt = this.renderPoints[i-1];
 			const lifetime = age - pt.t;
 
-			const ratio = lifetime / 15000;
+            let ratio = lifetime / 1000;
+            if (ratio > .8) ratio = .8;
 			ctx.strokeStyle = `hsla(100, 50%, ${ratio * 100}%, ${pt.opacity}%)`;
 			ctx.lineWidth = this.width * (1 - ratio);
 
@@ -43,7 +44,7 @@ export default class Path {
 		};
     }
 
-    addPoint(x, y, time) {
+    addPoint(x, y) {
 
         // get the previous point so we can determine the length of this segment
         if (this.pathPoints.length > 0) {
@@ -56,7 +57,7 @@ export default class Path {
             this.length += segmentLength;
         }
 
-        const newPoint = new PathPoint(x, y, time);
+        const newPoint = new PathPoint(x, y, this.length);
         this.pathPoints.push(newPoint);
         this.renderPoints.push(newPoint);
 

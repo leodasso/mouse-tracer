@@ -2,6 +2,7 @@ import React from 'react';
 import './App.css';
 import Canvas from './components/canvas';
 import { setModeToDraw, viewRandom, viewAll } from './Events';
+import SketchList from './components/SketchList/SketchList';
 
 function App() {
 
@@ -16,17 +17,9 @@ function App() {
             draw
           </button>
 
-          <button
-            onClick={() => viewRandom.invoke()}>
-            see random sketch
-          </button>
-
-          <button
-            onClick={() => viewAll.invoke()}>
-            see all sketches
-          </button>
 
         </div>
+        <SketchList />
         <Canvas />
       </header>
     </div>

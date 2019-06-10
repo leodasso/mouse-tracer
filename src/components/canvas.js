@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import { domToCanvasCoords, randomRange} from "../calc";
-
+import { domToCanvasCoords} from "../calc";
+import { connect } from 'react-redux';
 import Path from "../classes/Path";
 import Axios from "axios";
 import { setModeToDraw, viewRandom, viewAll } from '../Events';
@@ -39,43 +39,11 @@ class Canvas extends Component {
 			mouseX = event.screenX;
 			mouseY = event.screenY;
 	
-			const newLength = currentDrawing.addPoint(event.screenX, event.screenY, this.state.age);
+			const newLength = currentDrawing.addPoint(event.screenX, event.screenY);
 			this.increment(newLength);
 		});
 	}
 
-	viewRandom = () => {
-		// request for a random drawing
-		Axios.get('/api/sketches/random')
-		.then( response => {
-
-			currentPaths = [];
-			const newPath = new Path(response.data.path);
-			currentPaths.push(newPath);
-		})
-		.catch(error => {
-			console.log('error getting random sketch', error);
-		})
-	}
-
-
-	viewAll = () => {
-		
-		Axios.get('/api/sketches/all')
-
-		.then( response => {
-			// clear out the array of paths
-			currentPaths = [];
-			for (let sketch of response.data) {
-				currentPaths.push(new Path(sketch.path));
-			}
-		})
-
-		.catch(error => {
-			console.log('error getting sketches', error);
-		})
-
-	}
 
 	beginDrawing = () => {
 
@@ -124,14 +92,11 @@ class Canvas extends Component {
 			}
 		})
 
-		// upload the path
-		Axios.put('/api/sketches', filteredPts)
-		.then(() => {
-			console.log('success');
+		// dispatch an event to upload this sketch to the server
+		this.props.dispatch({
+			type: 'ADD_SKETCH',
+			payload: filteredPts,
 		})
-		.catch((error) => {
-			console.log('error putting sketch', error);
-		});
 
 		currentDrawing.explode();
 	}
@@ -171,7 +136,7 @@ class Canvas extends Component {
 		// Update and render the current drawing
 		if (currentDrawing) {
 			currentDrawing.update();
-			currentDrawing.render(ctx, canvas, this.state.age);
+			currentDrawing.render(ctx, canvas, this.state.lineLength);
 		}
 
 		// run update behaviors for all the render points.
@@ -181,7 +146,7 @@ class Canvas extends Component {
 		}
 
 		for (const path of currentPaths) {
-			path.render(ctx, canvas, this.state.age);
+			path.render(ctx, canvas, this.state.lineLength);
 		}
 
 	}
@@ -205,4 +170,8 @@ class Canvas extends Component {
 	}
 }
 
-export default Canvas;
+const mapStateToProps = (reduxState) => {
+	return reduxState;
+}
+
+export default connect(mapStateToProps)(Canvas);
