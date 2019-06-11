@@ -1,14 +1,28 @@
-import React from 'react';
+import React, {Component} from 'react';
+import { connect } from 'react-redux';
+import Sketch from '../Sketch/Sketch';
 
-function SketchList() {
+class SketchList extends Component {
 
-    
+    componentDidMount() {
 
-  return (
-    <div className="SketchList">
+        this.props.dispatch({type:'FETCH_SKETCHES'})
 
-    </div>
-  );
+    }
+
+    render() {
+
+        console.log(this.props);
+        return (
+            <div className="SketchList">
+                {this.props.sketches.map(sketch => <Sketch sketchData={sketch}/>)}
+            </div>
+        );
+    }
 }
 
-export default SketchList;
+const mapReduxState = (reduxState) => {
+    return reduxState;
+}
+
+export default connect(mapReduxState)(SketchList);

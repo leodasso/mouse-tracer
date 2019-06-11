@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { Component } from 'react';
+import './Sketch.css';
 
-function Sketch() {
+class Sketch extends Component {
 
-  return (
-    <div>
-      <p>A sketch</p>
-      <p>25 points</p>
-      <p>June 2nd</p>
-    </div>
-  );
+  render() {
+
+    const sketch = this.props.sketchData;
+
+    return (
+      
+      <div className="sketch-element">
+        <p>{sketch.path.length} points</p>
+        <p>{sketch.timestamp}</p>
+        <p>IP: {sketch.ip}</p>
+        <button>Add</button>
+      </div>
+    );
+  }
 }
 
 export default Sketch;

@@ -5,7 +5,7 @@ const sketches = require('./sketchesArray');
 
 router.put('/', (req, resp) => {
 
-    // console.log('adding a sketch with', req.body.length, ' points.' );
+    console.log('adding a sketch with', req.body.length, ' points.' );
     console.log(req.connection.remoteAddress);
 
     // make sure we're not receiving gigantic arrays

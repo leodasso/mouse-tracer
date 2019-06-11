@@ -21,7 +21,7 @@ function* fetchSketches() {
     try{
         const response = yield axios.get('/api/sketches/all');
         // dispatch response to reducer
-        put({type: 'SET_SKETCHES', payload: response.data});
+        yield put({type: 'SET_SKETCHES', payload: response.data});
 
     }
     catch(error) {
@@ -33,7 +33,7 @@ function* addSketch(action) {
 
     try {
         yield axios.put('/api/sketches', action.payload);
-        put({type: 'FETCH_SKETCHES'})
+        yield put({type: 'FETCH_SKETCHES'})
     }
     catch (error) {
         console.log('error adding new sketch to server', error);

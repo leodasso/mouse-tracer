@@ -10,18 +10,19 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>SKETCH</h1>
-        <div>
+      </header>
+      <div>
 
-          <button 
-            onClick={() => setModeToDraw.invoke()}>
-            draw
-          </button>
+        <button 
+          onClick={() => setModeToDraw.invoke()}>
+          draw
+        </button>
 
-
-        </div>
+      </div>
+      <div className="app-body">
         <SketchList />
         <Canvas />
-      </header>
+      </div>
     </div>
   );
 }

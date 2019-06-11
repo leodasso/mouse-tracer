@@ -28,8 +28,6 @@ class Canvas extends Component {
 
 		// add the begin drawing to the right event
 		setModeToDraw.addListener(this.beginDrawing);
-		viewRandom.addListener(this.viewRandom);
-		viewAll.addListener(this.viewAll);
 
 		// When the mouse moves, record the position
 		window.addEventListener( "mousemove", event => {
@@ -90,7 +88,9 @@ class Canvas extends Component {
 				y: pt.y,
 				t: pt.t,
 			}
-		})
+		});
+
+		console.log('finished drawing! dispatching new sketch');
 
 		// dispatch an event to upload this sketch to the server
 		this.props.dispatch({
